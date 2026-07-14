@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 const items = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/interview/new", label: "Practice", icon: Mic },
-  { href: "/dashboard#history", label: "History", icon: BarChart3 },
-  { href: "/dashboard#resume", label: "Resume", icon: FileText },
+  { href: "/history", label: "History", icon: BarChart3 },
+  { href: "/resume", label: "Resume", icon: FileText },
   { href: "/settings", label: "Settings", icon: Settings }
 ];
 
