@@ -1,0 +1,13 @@
+import { Router } from "express";
+import { analyticsRouter } from "./analytics.routes.js";
+import { authRouter } from "./auth.routes.js";
+import { interviewRouter } from "./interview.routes.js";
+import { resumeRouter } from "./resume.routes.js";
+import { voiceRouter } from "./voice.routes.js";
+export const apiRouter = Router();
+apiRouter.get("/health", (_req, res) => res.json({ status: "ok" }));
+apiRouter.use("/auth", authRouter);
+apiRouter.use("/interviews", interviewRouter);
+apiRouter.use("/resume", resumeRouter);
+apiRouter.use("/analytics", analyticsRouter);
+apiRouter.use("/voice", voiceRouter);
