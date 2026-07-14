@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Mic, MicOff, PhoneOff, Radio, Volume2, VolumeX, Settings, Play, Pause, RotateCcw } from "lucide-react";
+import { Mic, MicOff, PhoneOff, Radio, Volume2, VolumeX, Settings, Play, Pause, RotateCcw, Brain, FileText, BarChart3, Zap } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/services/api";
 import { InterviewSocket, type SocketEvent } from "@/services/interview-socket";
 import { useAuthStore } from "@/store/auth-store";
@@ -202,144 +202,254 @@ export function InterviewRoom({ id }: { id: string }) {
 
   return (
     <AppShell>
-      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
-        <section className="space-y-5">
-          <Card>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm text-foreground/60">{interview?.mode ?? "Interview"} · {connected ? "Connected" : "Connecting"}</p>
-                <h1 className="mt-2 text-2xl font-semibold">{currentQuestion?.prompt ?? "Ready when you are"}</h1>
-              </div>
-              <div className="flex items-center gap-2">
-                <Radio className={connected ? "text-primary" : "text-foreground/30"} />
-                <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => setShowSettings(!showSettings)}>
+      <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+        <section className="space-y-6">
+          {/* Main Interview Card */}
+          <Card className="glass">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                      {interview?.mode ?? "Technical"} Interview
+                    </span>
+                    <div className={`flex items-center gap-1.5 text-xs ${connected ? "text-green-600" : "text-yellow-600"}`}>
+                      <div className={`h-2 w-2 rounded-full ${connected ? "bg-green-500 animate-pulse" : "bg-yellow-500"}`} />
+                      {connected ? "Connected" : "Connecting"}
+                    </div>
+                  </div>
+                  <CardTitle className="text-2xl">{currentQuestion?.prompt ?? "Ready when you are"}</CardTitle>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setShowSettings(!showSettings)} className="h-9 w-9">
                   <Settings size={18} />
                 </Button>
               </div>
-            </div>
+            </CardHeader>
 
-            {showSettings && (
-              <div className="mt-4 rounded-md border border-border bg-muted p-4 space-y-4">
-                <h3 className="font-medium">Voice Settings</h3>
-                <div>
-                  <label className="text-sm text-foreground/70">AI Voice</label>
-                  <select 
-                    value={selectedVoice} 
-                    onChange={(e) => setSelectedVoice(e.target.value)}
-                    className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                  >
-                    {availableVoices.map((voice) => (
-                      <option key={voice.voiceURI} value={voice.voiceURI}>
-                        {voice.name} ({voice.lang})
-                      </option>
-                    ))}
-                  </select>
+            <CardContent className="space-y-6">
+              {/* Voice Settings Panel */}
+              {showSettings && (
+                <div className="rounded-xl border border-border bg-muted/50 p-6 space-y-6 animate-fade-in">
+                  <h3 className="font-semibold">Voice Settings</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-foreground/70">AI Voice</label>
+                      <select 
+                        value={selectedVoice} 
+                        onChange={(e) => setSelectedVoice(e.target.value)}
+                        className="mt-2 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-ring"
+                      >
+                        {availableVoices.map((voice) => (
+                          <option key={voice.voiceURI} value={voice.voiceURI}>
+                            {voice.name} ({voice.lang})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-foreground/70">Speech Rate: {speechRate.toFixed(1)}x</label>
+                      <input 
+                        type="range" 
+                        min="0.5" 
+                        max="2" 
+                        step="0.1" 
+                        value={speechRate}
+                        onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
+                        className="mt-2 w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-foreground/70">Speech Pitch: {speechPitch.toFixed(1)}x</label>
+                      <input 
+                        type="range" 
+                        min="0.5" 
+                        max="2" 
+                        step="0.1" 
+                        value={speechPitch}
+                        onChange={(e) => setSpeechPitch(parseFloat(e.target.value))}
+                        className="mt-2 w-full"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm text-foreground/70">Speech Rate: {speechRate.toFixed(1)}x</label>
-                  <input 
-                    type="range" 
-                    min="0.5" 
-                    max="2" 
-                    step="0.1" 
-                    value={speechRate}
-                    onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
-                    className="mt-1 w-full"
-                  />
+              )}
+
+              {/* AI Response Section */}
+              <div className="rounded-xl border border-border bg-background p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 flex-1">
+                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      aiSpeaking ? "gradient-bg" : "bg-muted"
+                    }`}>
+                      {aiSpeaking ? <Brain className="h-5 w-5 text-white" /> : <VolumeX className="h-5 w-5 text-muted-foreground" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className={`text-sm font-medium mb-1 ${aiSpeaking ? "text-primary" : "text-muted-foreground"}`}>
+                        AI Interviewer
+                      </p>
+                      <p className={`text-sm leading-relaxed ${aiSpeaking ? "text-foreground" : "text-muted-foreground"}`}>
+                        {aiText || "The AI interviewer will speak the next prompt here."}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={pauseAiSpeech} disabled={!aiSpeaking}>
+                      <Pause size={16} />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={resumeAiSpeech} disabled={!aiSpeaking}>
+                      <Play size={16} />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={stopAiSpeech} disabled={!aiSpeaking}>
+                      <VolumeX size={16} />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={replayAiSpeech} disabled={!aiText}>
+                      <RotateCcw size={16} />
+                    </Button>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm text-foreground/70">Speech Pitch: {speechPitch.toFixed(1)}x</label>
-                  <input 
-                    type="range" 
-                    min="0.5" 
-                    max="2" 
-                    step="0.1" 
-                    value={speechPitch}
-                    onChange={(e) => setSpeechPitch(parseFloat(e.target.value))}
-                    className="mt-1 w-full"
-                  />
+                <div className="mt-4">
+                  <Waveform active={aiSpeaking} />
                 </div>
               </div>
-            )}
 
-            <div className="mt-8 rounded-md border border-border bg-background p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 text-sm">
-                  {aiSpeaking ? <Volume2 size={18} className="text-primary" /> : <VolumeX size={18} className="text-foreground/50" />}
-                  <span className={aiSpeaking ? "text-primary" : "text-foreground/70"}>
-                    {aiText || "The AI interviewer will speak the next prompt here."}
-                  </span>
+              {/* Error Display */}
+              {speechError && (
+                <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive animate-fade-in">
+                  {speechError}
                 </div>
-                <div className="flex gap-1">
-                  <Button variant="ghost" className="h-8 w-8 p-0" onClick={pauseAiSpeech} disabled={!aiSpeaking}>
-                    <Pause size={16} />
-                  </Button>
-                  <Button variant="ghost" className="h-8 w-8 p-0" onClick={resumeAiSpeech} disabled={!aiSpeaking}>
-                    <Play size={16} />
-                  </Button>
-                  <Button variant="ghost" className="h-8 w-8 p-0" onClick={stopAiSpeech} disabled={!aiSpeaking}>
-                    <VolumeX size={16} />
-                  </Button>
-                  <Button variant="ghost" className="h-8 w-8 p-0" onClick={replayAiSpeech} disabled={!aiText}>
-                    <RotateCcw size={16} />
-                  </Button>
-                </div>
-              </div>
-              <Waveform active={aiSpeaking} />
-            </div>
+              )}
 
-            {speechError && (
-              <div className="mt-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {speechError}
+              {/* Control Buttons */}
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={start} disabled={recording} variant={recording ? "outline" : "primary"} className="gap-2">
+                  <Mic size={18} /> {recording ? "Recording..." : "Start Recording"}
+                </Button>
+                <Button variant="outline" onClick={() => setMuted((value) => !value)} className="gap-2">
+                  {muted ? <MicOff size={18} /> : <Mic size={18} />} {muted ? "Unmute" : "Mute"}
+                </Button>
+                <Button variant="outline" onClick={submitTranscript} className="gap-2">
+                  <FileText size={18} /> Fallback Transcript
+                </Button>
+                <Button variant="danger" onClick={stop} className="gap-2">
+                  <PhoneOff size={18} /> End Interview
+                </Button>
               </div>
-            )}
-
-            <div className="mt-6 flex flex-wrap gap-2">
-              <Button onClick={start} disabled={recording}><Mic size={18} /> Start</Button>
-              <Button variant="secondary" onClick={() => setMuted((value) => !value)}>{muted ? <MicOff size={18} /> : <Mic size={18} />} {muted ? "Unmute" : "Mute"}</Button>
-              <Button variant="secondary" onClick={submitTranscript}>Fallback transcript</Button>
-              <Button variant="danger" onClick={stop}><PhoneOff size={18} /> Stop</Button>
-            </div>
+            </CardContent>
           </Card>
 
+          {/* Transcript Card */}
           <Card>
-            <h2 className="mb-4 text-lg font-semibold">Real-time transcript</h2>
-            <div className="space-y-3">
-              {interimTranscript && (
-                <p className="rounded-md bg-primary/10 p-3 text-sm text-primary/80 italic">
-                  {interimTranscript}
-                </p>
-              )}
-              {transcripts.length === 0 && !interimTranscript && (
-                <p className="text-sm text-foreground/60">Answers will appear as soon as the voice pipeline receives transcript events.</p>
-              )}
-              {transcripts.map((text, index) => (
-                <p key={index} className="rounded-md bg-muted p-3 text-sm">{text}</p>
-              ))}
-            </div>
+            <CardHeader>
+              <CardTitle>Real-time Transcript</CardTitle>
+              <CardDescription>Your answers appear here as you speak</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {interimTranscript && (
+                  <div className="rounded-lg bg-primary/10 border border-primary/20 p-4 animate-fade-in">
+                    <p className="text-sm text-primary/90 italic">{interimTranscript}</p>
+                  </div>
+                )}
+                {transcripts.length === 0 && !interimTranscript && (
+                  <div className="text-center py-8">
+                    <Mic className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Start recording to see your transcript here</p>
+                  </div>
+                )}
+                {transcripts.map((text, index) => (
+                  <div key={index} className="rounded-lg bg-muted/50 border border-border p-4">
+                    <p className="text-sm">{text}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
           </Card>
         </section>
 
-        <aside className="space-y-5">
-          <Card>
-            <h2 className="text-lg font-semibold">Live feedback</h2>
-            {feedback ? (
-              <div className="mt-4 space-y-3 text-sm">
-                <Score label="Communication" value={feedback.communicationScore} />
-                <Score label="Technical" value={feedback.technicalScore} />
-                <Score label="Confidence" value={feedback.confidenceScore} />
-                <Score label="Clarity" value={feedback.clarityScore} />
-                <p className="pt-2 font-medium">Suggestions</p>
-                {feedback.suggestions.map((item) => <p key={item} className="text-foreground/70">{item}</p>)}
-              </div>
-            ) : <p className="mt-3 text-sm text-foreground/60">Submit an answer to receive scoring, weaknesses, strengths, and a model answer.</p>}
+        {/* Sidebar */}
+        <aside className="space-y-6">
+          {/* Live Feedback Card */}
+          <Card className="glass">
+            <CardHeader>
+              <CardTitle className="text-lg">Live Feedback</CardTitle>
+              <CardDescription>Real-time performance metrics</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {feedback ? (
+                <div className="space-y-4">
+                  <Score label="Communication" value={feedback.communicationScore} />
+                  <Score label="Technical" value={feedback.technicalScore} />
+                  <Score label="Confidence" value={feedback.confidenceScore} />
+                  <Score label="Clarity" value={feedback.clarityScore} />
+                  <div className="pt-4 border-t border-border">
+                    <p className="text-sm font-medium mb-2">Suggestions</p>
+                    <div className="space-y-2">
+                      {feedback.suggestions.map((item) => (
+                        <p key={item} className="text-sm text-muted-foreground flex items-start gap-2">
+                          <span className="text-primary">•</span>
+                          {item}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <BarChart3 className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Answer a question to see live feedback</p>
+                </div>
+              )}
+            </CardContent>
           </Card>
+
+          {/* Session Summary Card */}
           <Card>
-            <h2 className="text-lg font-semibold">Session summary</h2>
-            <p className="mt-3 text-sm text-foreground/65">Questions: {interview?.questions.length ?? 0}</p>
-            <p className="text-sm text-foreground/65">Status: {interview?.status ?? "draft"}</p>
-            <p className="text-sm text-foreground/65">Recording: {recording ? "Active" : "Inactive"}</p>
-            <p className="text-sm text-foreground/65">AI Speaking: {aiSpeaking ? "Yes" : "No"}</p>
+            <CardHeader>
+              <CardTitle className="text-lg">Session Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Questions</span>
+                <span className="font-medium">{interview?.questions.length ?? 0}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Status</span>
+                <span className="font-medium capitalize">{interview?.status ?? "draft"}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Recording</span>
+                <span className={`font-medium ${recording ? "text-green-600" : "text-muted-foreground"}`}>
+                  {recording ? "Active" : "Inactive"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">AI Speaking</span>
+                <span className={`font-medium ${aiSpeaking ? "text-primary" : "text-muted-foreground"}`}>
+                  {aiSpeaking ? "Yes" : "No"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Duration</span>
+                <span className="font-medium">{Math.round((Date.now() - startedAtRef.current) / 60000)}m</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tips Card */}
+          <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-3">
+                <div className="h-8 w-8 rounded-lg gradient-bg flex items-center justify-center flex-shrink-0">
+                  <Zap className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium mb-1">Pro Tip</p>
+                  <p className="text-xs text-muted-foreground">
+                    Speak clearly and at a moderate pace for better transcription accuracy.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
           </Card>
         </aside>
       </div>
