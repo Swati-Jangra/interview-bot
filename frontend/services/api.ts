@@ -12,7 +12,7 @@ const demoSession = {
     name: "Demo Candidate",
     email: DEMO_EMAIL,
     role: "candidate" as const,
-    isEmailVerified: true,
+    isEmailVerified: false,
     profile: {
       targetRole: "Frontend Engineer",
       experienceLevel: "Mid-level",
@@ -135,6 +135,20 @@ export const api = {
       return await apiFetch(`/interviews/${id}/complete`, { method: "POST" });
     } catch {
       return { ...demoInterview, _id: id, status: "completed" };
+    }
+  },
+  verifyEmail: async (body: { token: string }) => {
+    try {
+      return await apiFetch("/auth/verify-email", { method: "POST", body: JSON.stringify(body) });
+    } catch {
+      return { success: true, message: "Email verified successfully" };
+    }
+  },
+  resendVerificationEmail: async (body: { email: string }) => {
+    try {
+      return await apiFetch("/auth/resend-verification", { method: "POST", body: JSON.stringify(body) });
+    } catch {
+      return { success: true, message: "Verification email sent successfully" };
     }
   }
 };

@@ -89,7 +89,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       
       const session: any = await api.signup(body);
       setSession(session);
-      router.push("/dashboard");
+      
+      // Show verification message and redirect to verification page
+      router.push("/verify-email?email=" + encodeURIComponent(body.email));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to continue");
     } finally {
