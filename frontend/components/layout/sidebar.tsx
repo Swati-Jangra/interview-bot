@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BarChart3, FileText, LayoutDashboard, LogOut, Mic, Settings } from "lucide-react";
+import { BarChart3, FileText, LayoutDashboard, LogOut, Mic, Settings, CreditCard, User } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
 import { Button } from "@/components/ui/button";
 
@@ -10,6 +10,8 @@ const items = [
   { href: "/interview/new", label: "Practice", icon: Mic },
   { href: "/history", label: "History", icon: BarChart3 },
   { href: "/resume", label: "Resume", icon: FileText },
+  { href: "/agent", label: "Human Agent", icon: User },
+  { href: "/payment", label: "Upgrade", icon: CreditCard },
   { href: "/settings", label: "Settings", icon: Settings }
 ];
 

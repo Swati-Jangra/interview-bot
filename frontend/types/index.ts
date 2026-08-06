@@ -5,6 +5,14 @@ export type User = {
   role: "candidate" | "admin";
   isEmailVerified: boolean;
   profile?: Record<string, string>;
+  subscription?: {
+    plan: "free" | "basic" | "premium";
+    status: "active" | "inactive" | "cancelled" | "expired";
+    startDate?: string;
+    endDate?: string;
+    razorpaySubscriptionId?: string;
+  };
+  isPremiumUser?: boolean;
 };
 
 export type InterviewMode = "hr" | "technical" | "behavioral" | "custom" | "company";
