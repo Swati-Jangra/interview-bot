@@ -37,6 +37,10 @@ AI Interview Coach is a full-stack voice interview preparation platform. Candida
 - `POST /api/resume`
 - `GET /api/analytics`
 - `GET /api/analytics/dashboard`
+- `GET /api/security/dashboard` (Admin only)
+- `POST /api/security/log-event` (Authenticated)
+- `GET /api/security/recommendations` (Admin only)
+- `GET /api/security/audit-log` (Admin only)
 - `WS /ws/interview?token=<accessToken>`
 
 ## Data Models
@@ -51,6 +55,37 @@ Implemented Mongoose models:
 - `ResumeData`
 - `Analytics`
 - `Subscription`
+
+## Security Features
+
+This application implements comprehensive security measures to protect against common web vulnerabilities:
+
+### Backend Security
+- **Input Validation & Sanitization**: Prevents XSS, SQL injection, and command injection attacks
+- **Rate Limiting**: Multiple rate limiters for different endpoints (auth, API, file uploads)
+- **Account Security**: Account lockout after failed login attempts, secure password handling
+- **Request Security**: Content type validation, size limits, timeout protection
+- **Security Headers**: CSP, HSTS, XSS protection, frameguard
+- **CORS Configuration**: Strict cross-origin resource sharing policies
+- **Cookie Security**: HTTP-only, secure, same-site cookies
+- **Logging & Monitoring**: Security event tracking and anomaly detection
+- **Database Security**: SSL/TLS connections, connection pooling, query validation
+
+### Frontend Security
+- **Security Headers**: Custom security headers in Next.js config
+- **Input Sanitization**: Client-side input validation and sanitization
+- **Secure Storage**: Safe localStorage/sessionStorage wrappers
+- **URL Validation**: Protection against malicious redirects
+- **Content Security**: CSP nonce generation and validation
+- **Rate Limiting**: Client-side API rate limiting
+
+### Security Monitoring
+- **Security Dashboard**: Real-time security event monitoring at `/security`
+- **Event Logging**: Comprehensive security event tracking
+- **Audit Logs**: Security audit trail for admin users
+- **Anomaly Detection**: Automated detection of suspicious patterns
+
+For detailed security configuration, see [SECURITY_GUIDE.md](./SECURITY_GUIDE.md).
 
 ## Local Development
 
@@ -83,11 +118,15 @@ Backend:
 - `JWT_REFRESH_SECRET`
 - `OPENAI_API_KEY`
 - `SMTP_FROM`
+- `COOKIE_DOMAIN`
 
 Frontend:
 
 - `NEXT_PUBLIC_API_URL`
 - `NEXT_PUBLIC_WS_URL`
+- `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_ENABLE_ANALYTICS`
+- `NEXT_PUBLIC_SENTRY_DSN`
 
 ## Security Notes
 
@@ -95,6 +134,8 @@ Frontend:
 - Resume upload is limited to PDFs and 5 MB.
 - Audio upload is limited to 12 MB.
 - Production deployments should store refresh tokens in secure HTTP-only cookies, add CSRF protection for cookie auth, and use a managed mailer for verification/reset flows.
+- Comprehensive security measures including input sanitization, rate limiting, account lockout, and security monitoring are implemented.
+- See [SECURITY_GUIDE.md](./SECURITY_GUIDE.md) for detailed security configuration and best practices.
 
 ## Testing Strategy
 
@@ -103,6 +144,7 @@ Frontend:
 - Contract test WebSocket events: `join`, `transcript`, `interrupt`, and reconnect behavior.
 - Frontend component test auth forms, interview configuration, dashboard loading/error states, and interview room controls.
 - End-to-end test signup, configure interview, start session, submit transcript, complete interview, and view analytics.
+- Security tests for input validation, rate limiting, authentication, and vulnerability prevention.
 
 ## Deployment Guide
 
@@ -113,3 +155,6 @@ Frontend:
 5. Deploy frontend with `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_WS_URL` pointing to the backend.
 6. Enable observability: API logs, WebSocket connection counts, OpenAI latency/errors, MongoDB metrics.
 7. Add object storage for uploaded resumes if moving beyond memory-buffer processing.
+8. Configure security monitoring and alerting for production deployment.
+
+For Vercel deployment, see [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md).

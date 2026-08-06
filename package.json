@@ -8,7 +8,8 @@
     "build": "npm run build --workspace backend && npm run build --workspace frontend",
     "lint": "npm run lint --workspace backend && npm run lint --workspace frontend",
     "test": "npm run test --workspace backend",
-    "typecheck": "npm run typecheck --workspace backend && npm run typecheck --workspace frontend"
+    "typecheck": "npm run typecheck --workspace backend && npm run typecheck --workspace frontend",
+    "generate-secrets": "node scripts/generate-secrets.js"
   },
   "workspaces": [
     "frontend",

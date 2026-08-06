@@ -36,6 +36,17 @@ export async function login(email: string, password: string) {
   if (!user || !(await user.comparePassword(password))) {
     throw new AppError(401, "Invalid email or password", "INVALID_CREDENTIALS");
   }
+  
+  // Check if account is locked due to too many failed attempts
+  if (user.lockUntil && user.lockUntil > new Date()) {
+    throw new AppError(423, "Account is temporarily locked due to too many failed login attempts", "ACCOUNT_LOCKED");
+  }
+  
+  // Reset failed login attempts on successful login
+  user.loginAttempts = 0;
+  user.lockUntil = undefined;
+  await user.save();
+  
   return issueTokens(user);
 }
 
@@ -85,5 +96,22 @@ export async function resetPassword(token: string, password: string) {
   user.passwordHash = await bcrypt.hash(password, 12);
   user.passwordResetToken = undefined;
   user.passwordResetExpires = undefined;
+  await user.save();
+}
+
+/**
+ * Records failed login attempt and locks account if too many attempts
+ */
+export async function recordFailedLogin(email: string) {
+  const user = await User.findOne({ email });
+  if (!user) return;
+  
+  user.loginAttempts = (user.loginAttempts || 0) + 1;
+  
+  // Lock account after 5 failed attempts for 15 minutes
+  if (user.loginAttempts >= 5) {
+    user.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+  }
+  
   await user.save();
 }

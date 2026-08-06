@@ -133,13 +133,12 @@ export function InterviewRoom({ id }: { id: string }) {
   function handleEvent(event: SocketEvent) {
     if (event.type === "session_ready" || event.type === "ai_response") {
       if (event.question) {
-        setCurrentQuestion(event.question);
+        const question = event.question;
+        setCurrentQuestion(question);
+        setAskedQuestions(prev => [...prev, question.prompt || ""]);
       }
       setAiText(event.aiText || "");
       speakText(event.aiText || "");
-      if (event.question && event.question.prompt) {
-        setAskedQuestions(prev => [...prev, event.question.prompt]);
-      }
     }
     if (event.type === "transcript_received") setTranscripts((items) => [event.text, ...items]);
     if (event.type === "feedback") setFeedback(event.feedback);
