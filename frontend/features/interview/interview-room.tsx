@@ -11,6 +11,8 @@ import { InterviewSocket, type SocketEvent } from "@/services/interview-socket";
 import { useAuthStore } from "@/store/auth-store";
 import type { Feedback, Interview, Question } from "@/types";
 import { Waveform } from "./waveform";
+import { voiceAssistant } from "@/services/voice-assistant";
+import { generateAIQuestion } from "@/services/ai-question-generator";
 
 type SpeechRecognitionLike = {
   continuous: boolean;
@@ -32,6 +34,7 @@ type VoiceOption = {
 
 export function InterviewRoom({ id }: { id: string }) {
   const token = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
   const { data: interview } = useQuery({ queryKey: ["interview", id], queryFn: () => api.getInterview(id) as Promise<Interview> });
   const socket = useMemo(() => new InterviewSocket(), []);
   const [connected, setConnected] = useState(false);
@@ -49,6 +52,8 @@ export function InterviewRoom({ id }: { id: string }) {
   const [speechRate, setSpeechRate] = useState(1);
   const [speechPitch, setSpeechPitch] = useState(1);
   const [availableVoices, setAvailableVoices] = useState<VoiceOption[]>([]);
+  const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
+  const [useVoiceAssistant, setUseVoiceAssistant] = useState(true);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const startedAtRef = useRef<number>(Date.now());
   const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -84,6 +89,25 @@ export function InterviewRoom({ id }: { id: string }) {
   function speakText(text: string) {
     if (!text || muted) return;
     
+    // Use voice assistant if enabled
+    if (useVoiceAssistant && voiceAssistant.isSupported()) {
+      voiceAssistant.speak(text, {
+        rate: speechRate,
+        pitch: speechPitch,
+        volume: 1
+      }).then(() => {
+        setAiSpeaking(false);
+      }).catch(() => {
+        // Fallback to browser speech synthesis
+        fallbackSpeakText(text);
+      });
+      setAiSpeaking(true);
+    } else {
+      fallbackSpeakText(text);
+    }
+  }
+
+  function fallbackSpeakText(text: string) {
     window.speechSynthesis?.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     
@@ -108,12 +132,40 @@ export function InterviewRoom({ id }: { id: string }) {
 
   function handleEvent(event: SocketEvent) {
     if (event.type === "session_ready" || event.type === "ai_response") {
-      setCurrentQuestion(event.question);
-      setAiText(event.aiText);
-      speakText(event.aiText);
+      if (event.question) {
+        setCurrentQuestion(event.question);
+      }
+      setAiText(event.aiText || "");
+      speakText(event.aiText || "");
+      if (event.question && event.question.prompt) {
+        setAskedQuestions(prev => [...prev, event.question.prompt]);
+      }
     }
     if (event.type === "transcript_received") setTranscripts((items) => [event.text, ...items]);
     if (event.type === "feedback") setFeedback(event.feedback);
+  }
+
+  function generateNextQuestion() {
+    if (!user) return;
+    
+    const generatedQuestion = generateAIQuestion(
+      user,
+      interview?.mode || "technical",
+      askedQuestions
+    );
+    
+    setCurrentQuestion({
+      _id: `generated-${Date.now()}`,
+      prompt: generatedQuestion.question,
+      topic: generatedQuestion.category,
+      difficulty: generatedQuestion.difficulty,
+      expectedSignals: generatedQuestion.expectedTopics,
+      followUps: generatedQuestion.followUpSuggestions
+    });
+    
+    setAiText(generatedQuestion.question);
+    speakText(generatedQuestion.question);
+    setAskedQuestions(prev => [...prev, generatedQuestion.question]);
   }
 
   async function start() {
@@ -124,51 +176,70 @@ export function InterviewRoom({ id }: { id: string }) {
   }
 
   function startSpeechRecognition() {
-    const SpeechRecognition = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setSpeechError("Speech recognition is not supported in this browser");
-      return;
-    }
-    const recognition = new SpeechRecognition() as SpeechRecognitionLike;
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = String(interview?.config?.language ?? "en-US");
-    recognition.onresult = (event: any) => {
-      const result = event.results[event.results.length - 1];
-      const text = result?.[0]?.transcript?.trim();
-      if (result?.isFinal && text && currentQuestion) {
-        socket.send({
-          type: "transcript",
-          questionId: currentQuestion._id,
-          text,
-          durationSeconds: Math.round((Date.now() - startedAtRef.current) / 1000)
-        });
-        startedAtRef.current = Date.now();
-        setInterimTranscript("");
-      } else if (!result?.isFinal) {
-        setInterimTranscript(text || "");
-      }
-    };
-    recognition.onerror = (error: any) => {
-      setSpeechError(`Speech recognition error: ${error.error || "Unknown error"}`);
-      setRecording(false);
-    };
-    recognition.onstart = () => {
+    // Use voice assistant if enabled
+    if (useVoiceAssistant && voiceAssistant.isSupported()) {
+      voiceAssistant.startListening((transcript) => {
+        if (transcript && currentQuestion) {
+          socket.send({
+            type: "transcript",
+            questionId: currentQuestion._id,
+            text: transcript,
+            durationSeconds: Math.round((Date.now() - startedAtRef.current) / 1000)
+          });
+          startedAtRef.current = Date.now();
+          setTranscripts(prev => [transcript, ...prev]);
+        }
+      });
       setSpeechError("");
       setRecording(true);
-    };
-    recognition.onend = () => {
-      if (recording) {
-        // Restart if still supposed to be recording
-        try {
-          recognition.start();
-        } catch (e) {
-          setRecording(false);
-        }
+    } else {
+      // Fallback to browser speech recognition
+      const SpeechRecognition = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        setSpeechError("Speech recognition is not supported in this browser");
+        return;
       }
-    };
-    recognition.start();
-    recognitionRef.current = recognition;
+      const recognition = new SpeechRecognition() as SpeechRecognitionLike;
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = String(interview?.config?.language ?? "en-US");
+      recognition.onresult = (event: any) => {
+        const result = event.results[event.results.length - 1];
+        const text = result?.[0]?.transcript?.trim();
+        if (result?.isFinal && text && currentQuestion) {
+          socket.send({
+            type: "transcript",
+            questionId: currentQuestion._id,
+            text,
+            durationSeconds: Math.round((Date.now() - startedAtRef.current) / 1000)
+          });
+          startedAtRef.current = Date.now();
+          setInterimTranscript("");
+        } else if (!result?.isFinal) {
+          setInterimTranscript(text || "");
+        }
+      };
+      recognition.onerror = (error: any) => {
+        setSpeechError(`Speech recognition error: ${error.error || "Unknown error"}`);
+        setRecording(false);
+      };
+      recognition.onstart = () => {
+        setSpeechError("");
+        setRecording(true);
+      };
+      recognition.onend = () => {
+        if (recording) {
+          // Restart if still supposed to be recording
+          try {
+            recognition.start();
+          } catch (e) {
+            setRecording(false);
+          }
+        }
+      };
+      recognition.start();
+      recognitionRef.current = recognition;
+    }
   }
 
   function submitTranscript() {
@@ -196,6 +267,7 @@ export function InterviewRoom({ id }: { id: string }) {
   async function stop() {
     setRecording(false);
     recognitionRef.current?.stop();
+    voiceAssistant.stopListening();
     stopAiSpeech();
     await api.completeInterview(id);
   }
@@ -326,6 +398,18 @@ export function InterviewRoom({ id }: { id: string }) {
                 </Button>
                 <Button variant="outline" onClick={() => setMuted((value) => !value)} className="gap-2">
                   {muted ? <MicOff size={18} /> : <Mic size={18} />} {muted ? "Unmute" : "Mute"}
+                </Button>
+                {voiceAssistant.isSupported() && (
+                  <Button 
+                    variant={useVoiceAssistant ? "primary" : "outline"} 
+                    onClick={() => setUseVoiceAssistant(!useVoiceAssistant)} 
+                    className="gap-2"
+                  >
+                    <Brain size={18} /> {useVoiceAssistant ? "Voice AI On" : "Voice AI Off"}
+                  </Button>
+                )}
+                <Button variant="outline" onClick={generateNextQuestion} className="gap-2">
+                  <Zap size={18} /> Next Question
                 </Button>
                 <Button variant="outline" onClick={submitTranscript} className="gap-2">
                   <FileText size={18} /> Fallback Transcript
