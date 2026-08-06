@@ -105,20 +105,25 @@ export default function PaymentPage() {
     setError("");
 
     try {
-      // In production, you would call your backend to create an order
-      // const order = await api.createPaymentOrder({ plan, amount: plans[plan].price });
+      // For demo purposes, simulate payment
+      // In production, call backend to create payment order
+      // const order = await api.createPaymentOrder({ plan });
       
-      // For demo purposes, we'll simulate the payment flow
+      const demoAmount = plans[plan].price * 100;
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_demo",
-        amount: plans[plan].price * 100, // Amount in paise
+        amount: demoAmount,
         currency: "INR",
         name: "InterviewAI",
         description: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan Subscription`,
-        image: "/logo.png",
         handler: function (response: any) {
-          // Verify payment on backend
-          verifyPayment(response.razorpay_payment_id, response.razorpay_order_id, response.razorpay_signature, plan);
+          // In production, verify payment on backend
+          // verifyPayment(response.razorpay_payment_id, response.razorpay_order_id, response.razorpay_signature, plan);
+          
+          // For demo, simulate successful payment
+          setLoading(false);
+          alert("Payment successful! Your subscription is now active.");
+          router.push("/dashboard");
         },
         prefill: {
           name: user?.name,
@@ -142,27 +147,12 @@ export default function PaymentPage() {
     }
   }
 
-  async function verifyPayment(paymentId: string, orderId: string, signature: string, plan: Plan) {
-    try {
-      // In production, call your backend to verify the payment
-      // await api.verifyPayment({ paymentId, orderId, signature, plan });
-      
-      // For demo, simulate successful payment
-      setLoading(false);
-      alert("Payment successful! Your subscription is now active.");
-      router.push("/dashboard");
-    } catch (err) {
-      setError("Payment verification failed. Please contact support.");
-      setLoading(false);
-    }
-  }
-
   async function handleCancelSubscription() {
     if (!confirm("Are you sure you want to cancel your subscription?")) return;
 
     setLoading(true);
     try {
-      // In production, call your backend to cancel subscription
+      // In production, call backend to cancel subscription
       // await api.cancelSubscription();
       
       // For demo, simulate cancellation

@@ -15,16 +15,16 @@
     "frontend",
     "backend"
   ],
-  "overrides": {
-    "next": {
-      "postcss": "^8.5.10"
-    }
-  },
   "engines": {
     "node": ">=20.0.0"
   },
   "dependencies": {
     "@types/benchmark": "^2.1.5",
     "benchmark": "^2.1.4"
+  },
+  "overrides": {
+    "razorpay": {
+      "@types/razorpay": "npm:razorpay@latest"
+    }
   }
 }

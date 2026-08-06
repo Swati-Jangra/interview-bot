@@ -1,0 +1,14 @@
+import { Router } from "express";
+import * as controller from "../controllers/payment.controller.js";
+import { requireAuth } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
+import { authRateLimiter } from "../middleware/security.js";
+
+export const paymentRouter = Router();
+
+paymentRouter.use(requireAuth);
+
+paymentRouter.post("/create-order", authRateLimiter, validate(controller.createOrderSchema), controller.createOrder);
+paymentRouter.post("/verify", validate(controller.verifyPaymentSchema), controller.verifyPayment);
+paymentRouter.post("/cancel", controller.cancelSubscription);
+paymentRouter.get("/status", controller.getSubscriptionStatus);

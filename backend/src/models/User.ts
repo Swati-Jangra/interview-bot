@@ -16,6 +16,12 @@ export interface IUser extends mongoose.Document {
   passwordResetExpires?: Date;
   loginAttempts?: number;
   lockUntil?: Date;
+  subscription?: {
+    plan: "free" | "basic" | "premium";
+    status: "active" | "cancelled" | "expired" | "none";
+    startDate?: Date;
+    endDate?: Date;
+  };
   profile: {
     headline?: string;
     experienceLevel?: string;
@@ -47,6 +53,12 @@ const userSchema = new Schema<IUser>(
     passwordResetExpires: { type: Date, select: false, index: true },
     loginAttempts: { type: Number, default: 0, select: false },
     lockUntil: { type: Date, select: false, index: true },
+    subscription: {
+      plan: { type: String, enum: ["free", "basic", "premium"], default: "free" },
+      status: { type: String, enum: ["active", "cancelled", "expired", "none"], default: "none" },
+      startDate: { type: Date },
+      endDate: { type: Date }
+    },
     profile: {
       headline: { type: String, maxlength: 200 },
       experienceLevel: { type: String, maxlength: 50 },
